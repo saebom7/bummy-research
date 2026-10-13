@@ -20,7 +20,7 @@ $('search').onclick=()=>search();$('moreNews').onclick=()=>search(true);$('moreV
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 import {getFirestore,doc,getDoc,setDoc,onSnapshot} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-const firebaseConfig={apiKey:"AIzaSyAYGWtH8vRhyVretY4D_nlLp217Eusg6OI",authDomain:"bummy-research-af3bf.firebaseapp.com",projectId:"bummy-research-af3bf",storageBucket:"bummy-research-af3bf.firebasestorage.app",messagingSenderId:"843976556468",appId:"1:843976556468:web:65187a65fb9158ef4c7ce1"};
+const firebaseConfig={apiKey:"AIzaSyAYGWtH8vRhyVretY4D_nlLp217Eusg60I",authDomain:"bummy-research-af3bf.firebaseapp.com",projectId:"bummy-research-af3bf",storageBucket:"bummy-research-af3bf.firebasestorage.app",messagingSenderId:"843976556468",appId:"1:843976556468:web:65187a65fb9158ef4c7ce1"};
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 let user=null,unsub=null,cloudReady=false,saving=false,pending=false;
 const syncEl=document.getElementById('syncStatus');
