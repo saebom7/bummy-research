@@ -18,10 +18,28 @@ const p=/^UC[\w-]{22}$/.test(id)?{part:'snippet,contentDetails',id}:/^@?[\w.-]+$
 if(!p)return send(res,400,{error:'유튜브 @핸들 또는 채널 ID를 입력하세요.'});
 const d=await yt('channels',p),c=d.items?.[0];return c?send(res,200,{id:c.id,title:c.snippet.title,uploads:c.contentDetails.relatedPlaylists.uploads}):send(res,404,{error:'채널을 찾을 수 없습니다.'})}
 if(u.pathname==='/api/videos'){
-const uploads=u.searchParams.get('uploads')||'',pageToken=u.searchParams.get('pageToken')||'';if(!/^UU[\w-]{22}$/.test(uploads)||pageToken.length>300)return send(res,400,{error:'잘못된 요청입니다.'});
-const p=await yt('playlistItems',{part:'contentDetails',playlistId:uploads,maxResults:'50',...(pageToken?{pageToken}:{})});
-const ids=(p.items||[]).map(x=>x.contentDetails?.videoId).filter(Boolean);const d=ids.length?await yt('videos',{part:'snippet,statistics',id:ids.join(',')}):{items:[]};
-return send(res,200,{items:d.items.filter(x=>new Date(x.snippet.publishedAt)>=since()).map(x=>({id:x.id,title:x.snippet.title,channel:x.snippet.channelTitle,date:x.snippet.publishedAt,views:x.statistics?.viewCount==null?null:Number(x.statistics.viewCount),thumbnail:x.snippet.thumbnails?.medium?.url||'',url:'https://www.youtube.com/watch?v='+x.id})),nextPageToken:p.nextPageToken||null})}
+const uploads=u.searchParams.get('uploads')||'';
+if(!/^UU[\\w-]{22}$/.test(uploads))return send(res,400,{error:'잘못된 요청입니다.'});
+const days=7,cutoff=Date.now()-days*86400000;
+const key=uploads+':'+Math.floor(Date.now()/600000);
+if(!globalThis.videoCache)globalThis.videoCache=new Map();
+const cache=globalThis.videoCache;
+if(cache.has(key))return send(res,200,cache.get(key));
+const found=new Map();let token='',pages=0,complete=false;
+do{
+ const p=await yt('playlistItems',{part:'contentDetails',playlistId:uploads,maxResults:'50',...(token?{pageToken:token}:{})});
+ const recent=(p.items||[]).filter(x=>Date.parse(x.contentDetails?.videoPublishedAt||'')>=cutoff);
+ const ids=recent.map(x=>x.contentDetails?.videoId).filter(Boolean);
+ if(ids.length){const d=await yt('videos',{part:'snippet,statistics',id:ids.join(',')});for(const x of d.items||[]){
+ if(Date.parse(x.snippet?.publishedAt||'')>=cutoff)found.set(x.id,{id:x.id,title:x.snippet.title,channel:x.snippet.channelTitle,date:x.snippet.publishedAt,views:x.statistics?.viewCount==null?null:Number(x.statistics.viewCount),thumbnail:x.snippet.thumbnails?.medium?.url||'',url:'https://www.youtube.com/watch?v='+x.id});
+ }}
+ pages++;token=p.nextPageToken||'';
+ if(!token||recent.length<(p.items||[]).length){complete=true;break}
+}while(pages<20);
+const result={items:[...found.values()].sort((a,b)=>Date.parse(b.date)-Date.parse(a.date)),nextPageToken:null,days,complete,pages};
+if(cache.size>100)cache.clear();
+cache.set(key,result);
+return send(res,200,result)}
 if(u.pathname==='/api/news'){
 if(!process.env.NAVER_CLIENT_ID||!process.env.NAVER_CLIENT_SECRET)throw Error('서버에 네이버 API 인증정보가 설정되지 않았습니다.');
 const q=(u.searchParams.get('q')||'').trim(),sort=u.searchParams.get('sort')==='sim'?'sim':'date',start=Number(u.searchParams.get('start')||1);
