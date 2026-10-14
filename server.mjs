@@ -18,26 +18,27 @@ const p=/^UC[\w-]{22}$/.test(id)?{part:'snippet,contentDetails',id}:/^@?[\w.-]+$
 if(!p)return send(res,400,{error:'유튜브 @핸들 또는 채널 ID를 입력하세요.'});
 const d=await yt('channels',p),c=d.items?.[0];return c?send(res,200,{id:c.id,title:c.snippet.title,uploads:c.contentDetails.relatedPlaylists.uploads}):send(res,404,{error:'채널을 찾을 수 없습니다.'})}
 if(u.pathname==='/api/videos'){
-const uploads=u.searchParams.get('uploads')||'';
-if(!/^UU[\w-]{22}$/.test(uploads))return send(res,400,{error:'잘못된 요청입니다.'});
-const days=7,cutoff=Date.now()-days*86400000;
-const key=uploads+':'+Math.floor(Date.now()/600000);
+const uploads=u.searchParams.get('uploads')||'',pageToken=u.searchParams.get('pageToken')||'';
+if(!/^UU[\w-]{22}$/.test(uploads)||pageToken.length>300)return send(res,400,{error:'잘못된 요청입니다.'});
+const cutoff=Date.now()-7*86400000;
+const key=uploads+':'+pageToken+':'+Math.floor(Date.now()/600000);
 if(!globalThis.videoCache)globalThis.videoCache=new Map();
 const cache=globalThis.videoCache;
 if(cache.has(key))return send(res,200,cache.get(key));
-const found=new Map();let token='',pages=0,complete=false;
+const found=new Map();let token=pageToken,pages=0,complete=false;
 do{
  const p=await yt('playlistItems',{part:'contentDetails',playlistId:uploads,maxResults:'50',...(token?{pageToken:token}:{})});
- const recent=(p.items||[]).filter(x=>Date.parse(x.contentDetails?.videoPublishedAt||'')>=cutoff);
+ const entries=p.items||[];
+ const recent=entries.filter(x=>Date.parse(x.contentDetails?.videoPublishedAt||'')>=cutoff);
  const ids=recent.map(x=>x.contentDetails?.videoId).filter(Boolean);
  if(ids.length){const d=await yt('videos',{part:'snippet,statistics',id:ids.join(',')});for(const x of d.items||[]){
  if(Date.parse(x.snippet?.publishedAt||'')>=cutoff)found.set(x.id,{id:x.id,title:x.snippet.title,channel:x.snippet.channelTitle,date:x.snippet.publishedAt,views:x.statistics?.viewCount==null?null:Number(x.statistics.viewCount),thumbnail:x.snippet.thumbnails?.medium?.url||'',url:'https://www.youtube.com/watch?v='+x.id});
  }}
  pages++;token=p.nextPageToken||'';
- if(!token||recent.length<(p.items||[]).length){complete=true;break}
-}while(pages<20);
-const result={items:[...found.values()].sort((a,b)=>Date.parse(b.date)-Date.parse(a.date)),nextPageToken:null,days,complete,pages};
-if(cache.size>100)cache.clear();
+ if(!token||recent.length<entries.length){complete=true;break}
+}while(pages<4);
+const result={items:[...found.values()].sort((a,b)=>Date.parse(b.date)-Date.parse(a.date)),nextPageToken:complete?null:token,days:7,complete,pages};
+if(cache.size>250)cache.clear();
 cache.set(key,result);
 return send(res,200,result)}
 if(u.pathname==='/api/news'){
