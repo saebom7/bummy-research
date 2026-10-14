@@ -19,7 +19,7 @@ if(!p)return send(res,400,{error:'유튜브 @핸들 또는 채널 ID를 입력�
 const d=await yt('channels',p),c=d.items?.[0];return c?send(res,200,{id:c.id,title:c.snippet.title,uploads:c.contentDetails.relatedPlaylists.uploads}):send(res,404,{error:'채널을 찾을 수 없습니다.'})}
 if(u.pathname==='/api/videos'){
 const uploads=u.searchParams.get('uploads')||'';
-if(!/^UU[\\w-]{22}$/.test(uploads))return send(res,400,{error:'잘못된 요청입니다.'});
+if(!/^UU[\w-]{22}$/.test(uploads))return send(res,400,{error:'잘못된 요청입니다.'});
 const days=7,cutoff=Date.now()-days*86400000;
 const key=uploads+':'+Math.floor(Date.now()/600000);
 if(!globalThis.videoCache)globalThis.videoCache=new Map();
