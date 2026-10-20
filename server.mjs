@@ -2,7 +2,7 @@ import http from 'node:http';
 import {readFile} from 'node:fs/promises';
 const port=Number(process.env.PORT||3000);
 const send=(r,s,d)=>{r.writeHead(s,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Origin':'https://saebom7.github.io','Vary':'Origin'});r.end(JSON.stringify(d))};
-const get=async(u,headers={})=>{const r=await fetch(u,{headers,signal:AbortSignal.timeout(12000)});const d=await r.json();if(!r.ok)throw Error(d.error?.message||'외부 API 오류');return d};
+const get=async(u,headers={})=>{const r=await fetch(u,{headers,signal:AbortSignal.timeout(12000)});const d=await r.json();if(!r.ok){const code=typeof d.error?.errorCode==='string'?d.error.errorCode:typeof d.error?.code==='string'?d.error.code:'unknown';throw Error('외부 API HTTP '+r.status+' (오류 코드: '+String(code).slice(0,40)+')')}return d};
 const yt=(type,params)=>{if(!process.env.YOUTUBE_API_KEY)throw Error('서버에 유튜브 API 키가 설정되지 않았습니다.');return get('https://www.googleapis.com/youtube/v3/'+type+'?'+new URLSearchParams({...params,key:process.env.YOUTUBE_API_KEY}))};
 const since=()=>{const d=new Date();d.setFullYear(d.getFullYear()-5);return d};
 const clean=s=>String(s||'').replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
