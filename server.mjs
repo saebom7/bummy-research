@@ -45,7 +45,7 @@ if(u.pathname==='/api/news'){
 if(!process.env.NAVER_CLIENT_ID||!process.env.NAVER_CLIENT_SECRET)throw Error('서버에 네이버 API 인증정보가 설정되지 않았습니다.');
 const q=(u.searchParams.get('q')||'').trim(),sort=u.searchParams.get('sort')==='sim'?'sim':'date',start=Number(u.searchParams.get('start')||1);
 if(!q||q.length>100||!Number.isInteger(start)||start<1||start>901)return send(res,400,{error:'검색 조건을 확인하세요.'});
-const d=await get('https://openapi.naver.com/v1/search/news.json?'+new URLSearchParams({query:q,sort,start:String(start),display:'100'}),{'X-Naver-Client-Id':process.env.NAVER_CLIENT_ID,'X-Naver-Client-Secret':process.env.NAVER_CLIENT_SECRET});
+const d=await get('https://naverapihub.apigw.ntruss.com/search/v1/news?'+new URLSearchParams({query:q,sort,start:String(start),display:'100'}),{'X-NCP-APIGW-API-KEY-ID':process.env.NAVER_CLIENT_ID,'X-NCP-APIGW-API-KEY':process.env.NAVER_CLIENT_SECRET});
 return send(res,200,{items:(d.items||[]).filter(x=>new Date(x.pubDate)>=since()).map(x=>({title:clean(x.title),url:x.originallink||x.link,date:x.pubDate,description:clean(x.description)})),nextStart:d.items?.length===100&&start<901?start+100:null})}
 return send(res,404,{error:'찾을 수 없는 경로입니다.'});
 }catch(e){send(res,500,{error:e.message})}}).listen(port,()=>console.log('Listening on '+port));
